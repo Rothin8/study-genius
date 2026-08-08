@@ -3,8 +3,17 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
+import { useRoles } from "@/hooks/use-role";
 import { Button } from "@/components/ui/button";
-import { Sparkle, MessageSquare, Library, Loader2, LogOut } from "lucide-react";
+import {
+  Sparkle,
+  MessageSquare,
+  Library,
+  Loader2,
+  LogOut,
+  Users,
+  BarChart3,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -12,13 +21,9 @@ export const Route = createFileRoute("/_authenticated")({
   component: AppShell,
 });
 
-const nav = [
-  { to: "/chat", label: "AI Chat", icon: MessageSquare },
-  { to: "/library", label: "My Documents", icon: Library },
-] as const;
-
 function AppShell() {
   const { session, user, loading } = useSession();
+  const { isTeacher, isAdmin } = useRoles();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -33,6 +38,13 @@ function AppShell() {
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   }
+
+  const nav = [
+    { to: "/chat", label: "AI Chat", icon: MessageSquare },
+    { to: "/library", label: "My Documents", icon: Library },
+    { to: "/classes", label: isTeacher ? "My Classes" : "Classes", icon: Users },
+    ...(isAdmin ? [{ to: "/admin", label: "Analytics", icon: BarChart3 }] : []),
+  ] as const;
 
   if (loading || !session) {
     return (

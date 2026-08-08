@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ingestDocument } from "@/lib/rag.functions";
+import { ocrPages } from "@/lib/ocr.functions";
 import { extractPages } from "@/lib/extract-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ type Doc = {
 function LibraryPage() {
   const queryClient = useQueryClient();
   const ingest = useServerFn(ingestDocument);
+  const runOcr = useServerFn(ocrPages);
   const inputRef = useRef<HTMLInputElement>(null);
   const [subject, setSubject] = useState("");
   const [stage, setStage] = useState<string | null>(null);
@@ -64,7 +66,11 @@ function LibraryPage() {
   const upload = useMutation({
     mutationFn: async (file: File) => {
       setStage(`Reading ${file.name}...`);
-      const pages = await extractPages(file);
+      const pages = await extractPages(file, async (images) => {
+        setStage("Scanned pages detected — running OCR...");
+        const { texts } = await runOcr({ data: { images } });
+        return texts;
+      });
 
       setStage("Uploading original file...");
       const path = `${crypto.randomUUID()}-${file.name}`;
@@ -143,7 +149,7 @@ function LibraryPage() {
         <UploadCloud className="mx-auto size-8 text-primary" />
         <h2 className="mt-4 text-lg font-semibold">Drag & drop your study material</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          PDF, DOCX, TXT, MD — up to 20MB per file
+          PDF, DOCX, images, TXT, MD — scanned pages go through OCR automatically
         </p>
 
         <div className="mx-auto mt-6 flex max-w-sm flex-col gap-3">
@@ -156,7 +162,7 @@ function LibraryPage() {
             ref={inputRef}
             type="file"
             multiple
-            accept=".pdf,.docx,.txt,.md,.csv"
+            accept=".pdf,.docx,.txt,.md,.csv,.png,.jpg,.jpeg,.webp"
             className="hidden"
             onChange={(e) => void handleFiles(e.target.files)}
           />
