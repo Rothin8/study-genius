@@ -1,3 +1,5 @@
+import type { PDFPageProxy } from "pdfjs-dist";
+
 export type ExtractedPage = { page: number; text: string };
 export type OcrFn = (images: string[]) => Promise<string[]>;
 
@@ -77,20 +79,16 @@ async function extractPdf(file: File, ocr?: OcrFn): Promise<ExtractedPage[]> {
   return usable;
 }
 
-async function renderPageImage(page: {
-  getViewport: (options: { scale: number }) => { width: number; height: number };
-  render: (options: { canvasContext: CanvasRenderingContext2D; viewport: unknown }) => {
-    promise: Promise<void>;
-  };
-}): Promise<string> {
-  const viewport = page.getViewport({ scale: 1.6 });
+async function renderPageImage(page: PDFPageProxy): Promise<string> {
+  const base = page.getViewport({ scale: 1 });
+  const scale = Math.min(1.8, 1600 / base.width);
+  const viewport = page.getViewport({ scale });
   const canvas = document.createElement("canvas");
-  canvas.width = Math.min(Math.round(viewport.width), 1600);
-  canvas.height = Math.round(viewport.height * (canvas.width / viewport.width));
+  canvas.width = Math.round(viewport.width);
+  canvas.height = Math.round(viewport.height);
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Your browser could not render this page for OCR.");
-  const scaled = page.getViewport({ scale: (1.6 * canvas.width) / viewport.width });
-  await page.render({ canvasContext: context, viewport: scaled }).promise;
+  await page.render({ canvas, canvasContext: context, viewport }).promise;
   return canvas.toDataURL("image/jpeg", 0.75);
 }
 
