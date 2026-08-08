@@ -334,17 +334,8 @@ function StudentView() {
 
   const join = useMutation({
     mutationFn: async () => {
-      const { data: found, error: findError } = await supabase
-        .from("classes")
-        .select("id")
-        .eq("join_code", code.trim().toUpperCase())
-        .maybeSingle();
-      if (findError) throw findError;
-      if (!found) throw new Error("No class found with that code.");
-      const { error } = await supabase
-        .from("class_members")
-        .insert({ class_id: found.id, student_id: user!.id });
-      if (error) throw error;
+      const { error } = await supabase.rpc("join_class_by_code", { _code: code.trim() });
+      if (error) throw new Error(error.message.replace("No class found with that code", "No class found with that code."));
     },
     onSuccess: () => {
       setCode("");
