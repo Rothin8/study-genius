@@ -80,7 +80,19 @@ function AuthPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/chat" });
+
+    // The session is written asynchronously by the auth helper — wait for it
+    // before navigating, otherwise the protected route bounces back here.
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        navigate({ to: "/chat", replace: true });
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    toast.error("Signed in, but the session didn't load. Please refresh.");
+    setBusy(false);
   }
 
   return (
