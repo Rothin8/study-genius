@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { useRoles } from "@/hooks/use-role";
+import { rememberRedirect } from "@/lib/auth-redirect";
 import { Button } from "@/components/ui/button";
 import {
   Sparkle,
@@ -27,10 +28,13 @@ function AppShell() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const href = useRouterState({ select: (s) => s.location.href });
 
   useEffect(() => {
-    if (!loading && !session) navigate({ to: "/auth", replace: true });
-  }, [loading, session, navigate]);
+    if (loading || session) return;
+    rememberRedirect(href);
+    navigate({ to: "/auth", search: { redirect: href }, replace: true });
+  }, [loading, session, navigate, href]);
 
   async function signOut() {
     await queryClient.cancelQueries();
