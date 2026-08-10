@@ -1,10 +1,10 @@
 import { createFileRoute, Outlet, useNavigate, Link, useRouterState } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { useRoles } from "@/hooks/use-role";
-import { rememberRedirect } from "@/lib/auth-redirect";
+import { rememberRedirect, sanitizeRedirect } from "@/lib/auth-redirect";
 import { Button } from "@/components/ui/button";
 import {
   Sparkle,
@@ -29,11 +29,18 @@ function AppShell() {
   const queryClient = useQueryClient();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const href = useRouterState({ select: (s) => s.location.href });
+  const bounced = useRef(false);
 
   useEffect(() => {
-    if (loading || session) return;
-    rememberRedirect(href);
-    navigate({ to: "/auth", search: { redirect: href }, replace: true });
+    if (loading || session || bounced.current) return;
+    bounced.current = true;
+    const safe = sanitizeRedirect(href);
+    if (safe) rememberRedirect(safe);
+    navigate({
+      to: "/auth",
+      search: safe ? { redirect: safe } : {},
+      replace: true,
+    });
   }, [loading, session, navigate, href]);
 
   async function signOut() {
