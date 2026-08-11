@@ -269,9 +269,35 @@ function LibraryPage() {
               )}
             </div>
             <Badge variant={doc.status === "ready" ? "default" : "secondary"}>{doc.status}</Badge>
+            {doc.storage_path && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => void openOriginal(doc)}
+                aria-label={`Open ${doc.file_name}`}
+              >
+                <ExternalLink className="size-4" />
+              </Button>
+            )}
+            {doc.status === "failed" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={retry.isPending}
+                onClick={() => retry.mutate(doc)}
+                aria-label={`Retry ${doc.file_name}`}
+              >
+                {retry.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
+              disabled={remove.isPending}
               onClick={() => remove.mutate(doc.id)}
               aria-label={`Delete ${doc.file_name}`}
             >
