@@ -1,10 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { chunkPages, buildContextBlock, RAG_SYSTEM_PROMPT } from "./rag.server";
-import type { RetrievedChunk } from "./rag.server";
-import { embedTexts, getLovableApiKey, createResponsesProvider } from "./ai-gateway.server";
-import { streamText } from "ai";
+import { chunkPages } from "./rag.server";
+import { embedTexts, getLovableApiKey } from "./ai-gateway.server";
 
 const IngestInput = z.object({
   fileName: z.string().min(1),
