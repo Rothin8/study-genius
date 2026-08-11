@@ -38,7 +38,6 @@ function AuthPage() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"student" | "teacher">("student");
   const [busy, setBusy] = useState(false);
 
   const destination = sanitizeRedirect(redirectParam) ?? null;
@@ -84,7 +83,7 @@ function AuthPage() {
           password,
           options: {
             emailRedirectTo: `${window.location.origin}/auth/callback`,
-            data: { full_name: name, role },
+            data: { full_name: name },
           },
         });
         if (error) throw error;
@@ -161,27 +160,6 @@ function AuthPage() {
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {mode === "signup" && (
             <div className="space-y-2">
-              <Label>I am a</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {(["student", "teacher"] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => setRole(option)}
-                    className={`rounded-xl border px-3 py-2 text-sm capitalize transition-colors ${
-                      role === option
-                        ? "border-primary bg-accent text-accent-foreground"
-                        : "border-border text-muted-foreground hover:bg-accent/50"
-                    }`}
-                  >
-                    {option}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {mode === "signup" && (
-            <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
                 id="name"
@@ -191,6 +169,12 @@ function AuthPage() {
                 autoComplete="name"
               />
             </div>
+          )}
+          {mode === "signup" && (
+            <p className="text-xs text-muted-foreground">
+              Everyone starts as a student. Teachers get upgraded with an invite code from the
+              Classes page after signing in.
+            </p>
           )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
