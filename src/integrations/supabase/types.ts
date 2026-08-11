@@ -275,6 +275,63 @@ export type Database = {
         }
         Relationships: []
       }
+      role_change_log: {
+        Row: {
+          action: string
+          actor_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Insert: {
+          action: string
+          actor_id: string
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          target_user_id?: string
+        }
+        Relationships: []
+      }
+      teacher_invites: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          max_uses: number
+          used_count: number
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number
+          used_count?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          max_uses?: number
+          used_count?: number
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -301,6 +358,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_list_users: {
+        Args: never
+        Returns: {
+          created_at: string
+          display_name: string
+          documents_count: number
+          email: string
+          last_sign_in_at: string
+          questions_count: number
+          roles: string[]
+          user_id: string
+        }[]
+      }
+      admin_set_role: {
+        Args: {
+          _grant: boolean
+          _role: Database["public"]["Enums"]["app_role"]
+          _target_user_id: string
+        }
+        Returns: undefined
+      }
       can_read_document: {
         Args: { _document_id: string; _user_id: string }
         Returns: boolean
@@ -349,6 +427,7 @@ export type Database = {
         }[]
       }
       platform_stats: { Args: never; Returns: Json }
+      redeem_teacher_invite: { Args: { _code: string }; Returns: boolean }
     }
     Enums: {
       app_role: "student" | "teacher" | "admin"
