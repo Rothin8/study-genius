@@ -49,14 +49,15 @@ export const Route = createFileRoute("/api/chat/stream")({
           .insert({ conversation_id: conversationId, user_id: userId, role: "user", content: question });
 
         const [queryVector] = await embedTexts(apiKey, [question]);
+        const rpcArgs = {
+          query_embedding: JSON.stringify(queryVector),
+          query_text: question,
+          match_count: 10,
+          ...(documentIds ? { filter_document_ids: documentIds } : {}),
+        };
         const { data: matches, error: matchError } = await supabase.rpc(
           "hybrid_match_document_chunks",
-          {
-            query_embedding: JSON.stringify(queryVector),
-            query_text: question,
-            match_count: 10,
-            filter_document_ids: documentIds ?? undefined,
-          },
+          rpcArgs,
         );
         if (matchError) return new Response(matchError.message, { status: 500 });
 
