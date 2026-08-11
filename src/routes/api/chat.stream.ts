@@ -55,7 +55,7 @@ export const Route = createFileRoute("/api/chat/stream")({
             query_embedding: JSON.stringify(queryVector),
             query_text: question,
             match_count: 10,
-            filter_document_ids: documentIds,
+            filter_document_ids: documentIds ?? undefined,
           },
         );
         if (matchError) return new Response(matchError.message, { status: 500 });
