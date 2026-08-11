@@ -400,6 +400,26 @@ export type Database = {
         }
         Returns: boolean
       }
+      hybrid_match_document_chunks: {
+        Args: {
+          filter_document_ids?: string[]
+          match_count?: number
+          query_embedding: string
+          query_text: string
+        }
+        Returns: {
+          chunk_index: number
+          content: string
+          document_id: string
+          file_name: string
+          id: string
+          keyword_rank: number
+          page_number: number
+          score: number
+          similarity: number
+          subject: string
+        }[]
+      }
       is_class_member: {
         Args: { _class_id: string; _user_id: string }
         Returns: boolean
