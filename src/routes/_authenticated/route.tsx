@@ -38,7 +38,7 @@ function AppShell() {
     if (safe) rememberRedirect(safe);
     navigate({
       to: "/auth",
-      search: safe ? { redirect: safe } : {},
+      search: { redirect: safe ?? undefined },
       replace: true,
     });
   }, [loading, session, navigate, href]);
@@ -47,7 +47,7 @@ function AppShell() {
     await queryClient.cancelQueries();
     queryClient.clear();
     await supabase.auth.signOut();
-    navigate({ to: "/auth", replace: true });
+    navigate({ to: "/auth", search: {}, replace: true });
   }
 
   const nav = [

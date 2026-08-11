@@ -5,13 +5,22 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ingestDocument } from "@/lib/rag.functions";
+import { deleteDocument } from "@/lib/documents.functions";
 import { ocrPages } from "@/lib/ocr.functions";
 import { extractPages } from "@/lib/extract-text";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UploadCloud, FileText, Trash2, Loader2, Layers } from "lucide-react";
+import {
+  UploadCloud,
+  FileText,
+  Trash2,
+  Loader2,
+  Layers,
+  RefreshCw,
+  ExternalLink,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({
@@ -40,11 +49,13 @@ type Doc = {
   page_count: number;
   chunk_count: number;
   created_at: string;
+  storage_path: string | null;
 };
 
 function LibraryPage() {
   const queryClient = useQueryClient();
   const ingest = useServerFn(ingestDocument);
+  const removeDocument = useServerFn(deleteDocument);
   const runOcr = useServerFn(ocrPages);
   const inputRef = useRef<HTMLInputElement>(null);
   const [subject, setSubject] = useState("");
@@ -100,16 +111,66 @@ function LibraryPage() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("documents").delete().eq("id", id);
-      if (error) throw error;
-    },
+    mutationFn: async (id: string) => removeDocument({ data: { documentId: id } }),
     onSuccess: () => {
-      toast.success("Document removed.");
+      toast.success("Document and stored file removed.");
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : "Delete failed."),
   });
+
+  const retry = useMutation({
+    mutationFn: async (doc: Doc) => {
+      if (!doc.storage_path) throw new Error("Original file is no longer stored — re-upload it.");
+      setStage(`Re-reading ${doc.file_name}...`);
+      const { data: blob, error } = await supabase.storage
+        .from("documents")
+        .download(doc.storage_path);
+      if (error || !blob) throw new Error(error?.message ?? "Could not read the stored file.");
+
+      const file = new File([blob], doc.file_name, { type: doc.file_type });
+      const pages = await extractPages(file, async (images) => {
+        setStage("Scanned pages detected — running OCR...");
+        const { texts } = await runOcr({ data: { images } });
+        return texts;
+      });
+
+      setStage("Re-indexing passages...");
+      const result = await ingest({
+        data: {
+          fileName: doc.file_name,
+          fileType: doc.file_type,
+          fileSize: doc.file_size,
+          storagePath: doc.storage_path,
+          subject: doc.subject,
+          pages,
+        },
+      });
+      await supabase.from("documents").delete().eq("id", doc.id);
+      return result;
+    },
+    onSuccess: (result) => {
+      toast.success(`Re-indexed ${result.chunks} passages.`);
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : "Retry failed."),
+    onSettled: () => setStage(null),
+  });
+
+  async function openOriginal(doc: Doc) {
+    if (!doc.storage_path) {
+      toast.error("No stored original for this document.");
+      return;
+    }
+    const { data, error } = await supabase.storage
+      .from("documents")
+      .createSignedUrl(doc.storage_path, 60);
+    if (error || !data) {
+      toast.error(error?.message ?? "Could not open the file.");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
 
   const handleFiles = useCallback(
     async (files: FileList | null) => {
@@ -208,9 +269,35 @@ function LibraryPage() {
               )}
             </div>
             <Badge variant={doc.status === "ready" ? "default" : "secondary"}>{doc.status}</Badge>
+            {doc.storage_path && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => void openOriginal(doc)}
+                aria-label={`Open ${doc.file_name}`}
+              >
+                <ExternalLink className="size-4" />
+              </Button>
+            )}
+            {doc.status === "failed" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                disabled={retry.isPending}
+                onClick={() => retry.mutate(doc)}
+                aria-label={`Retry ${doc.file_name}`}
+              >
+                {retry.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
+              disabled={remove.isPending}
               onClick={() => remove.mutate(doc.id)}
               aria-label={`Delete ${doc.file_name}`}
             >
