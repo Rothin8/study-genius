@@ -316,6 +316,7 @@ function StudentView() {
   const queryClient = useQueryClient();
   const { user } = useSession();
   const [code, setCode] = useState("");
+  const [teacherCode, setTeacherCode] = useState("");
 
   const { data: classes, isLoading } = useQuery({
     queryKey: ["classes", "joined"],
@@ -345,6 +346,20 @@ function StudentView() {
     onError: (error) => toast.error(error instanceof Error ? error.message : "Could not join."),
   });
 
+  const becomeTeacher = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc("redeem_teacher_invite", { _code: teacherCode.trim() });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      setTeacherCode("");
+      toast.success("You're a teacher now — your class tools are unlocked.");
+      queryClient.invalidateQueries({ queryKey: ["my-roles"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not use that invite code."),
+  });
+
   return (
     <>
       <section className="glass mt-8 rounded-3xl p-6">
@@ -361,6 +376,31 @@ function StudentView() {
           <Button disabled={!code.trim() || join.isPending} onClick={() => join.mutate()}>
             {join.isPending && <Loader2 className="size-4 animate-spin" />}
             Join
+          </Button>
+        </div>
+      </section>
+
+      <section className="glass mt-6 rounded-3xl p-6">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <GraduationCap className="size-4 text-primary" /> Are you a teacher?
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Enter the teacher invite code an admin gave you to unlock class creation.
+        </p>
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <Input
+            value={teacherCode}
+            onChange={(e) => setTeacherCode(e.target.value.toUpperCase())}
+            placeholder="Teacher invite code"
+            className="font-mono"
+          />
+          <Button
+            variant="secondary"
+            disabled={!teacherCode.trim() || becomeTeacher.isPending}
+            onClick={() => becomeTeacher.mutate()}
+          >
+            {becomeTeacher.isPending && <Loader2 className="size-4 animate-spin" />}
+            Upgrade
           </Button>
         </div>
       </section>

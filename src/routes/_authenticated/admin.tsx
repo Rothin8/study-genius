@@ -13,6 +13,8 @@ import {
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "@/hooks/use-role";
+import { useSession } from "@/hooks/use-session";
+import { AdminUsers } from "@/components/admin-users";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldAlert } from "lucide-react";
 
@@ -47,6 +49,7 @@ type Stats = {
 
 function AdminPage() {
   const { isAdmin, loading: rolesLoading } = useRoles();
+  const { user } = useSession();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["platform-stats"],
@@ -193,6 +196,8 @@ function AdminPage() {
               </ResponsiveContainer>
             </div>
           </section>
+
+          <AdminUsers currentUserId={user?.id} />
         </>
       )}
     </div>
