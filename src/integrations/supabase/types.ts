@@ -14,6 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignment_documents: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          document_id: string
+          id: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          document_id: string
+          id?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_documents_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "class_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignment_progress: {
+        Row: {
+          assignment_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_progress_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "class_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      class_assignments: {
+        Row: {
+          class_id: string
+          created_at: string
+          created_by: string
+          due_at: string | null
+          id: string
+          instructions: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          class_id: string
+          created_at?: string
+          created_by: string
+          due_at?: string | null
+          id?: string
+          instructions?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          class_id?: string
+          created_at?: string
+          created_by?: string
+          due_at?: string | null
+          id?: string
+          instructions?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_assignments_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       class_documents: {
         Row: {
           class_id: string
@@ -257,6 +372,27 @@ export type Database = {
           },
         ]
       }
+      plan_limits: {
+        Row: {
+          max_documents: number
+          max_pages_per_month: number
+          max_questions_per_month: number
+          plan: Database["public"]["Enums"]["plan_tier"]
+        }
+        Insert: {
+          max_documents: number
+          max_pages_per_month: number
+          max_questions_per_month: number
+          plan: Database["public"]["Enums"]["plan_tier"]
+        }
+        Update: {
+          max_documents?: number
+          max_pages_per_month?: number
+          max_questions_per_month?: number
+          plan?: Database["public"]["Enums"]["plan_tier"]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -302,6 +438,30 @@ export type Database = {
         }
         Relationships: []
       }
+      subjects: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       teacher_invites: {
         Row: {
           code: string
@@ -329,6 +489,60 @@ export type Database = {
           id?: string
           max_uses?: number
           used_count?: number
+        }
+        Relationships: []
+      }
+      usage_counters: {
+        Row: {
+          created_at: string
+          documents: number
+          id: string
+          pages: number
+          period: string
+          questions: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          documents?: number
+          id?: string
+          pages?: number
+          period: string
+          questions?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          documents?: number
+          id?: string
+          pages?: number
+          period?: string
+          questions?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_plans: {
+        Row: {
+          created_at: string
+          plan: Database["public"]["Enums"]["plan_tier"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          plan?: Database["public"]["Enums"]["plan_tier"]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -366,10 +580,18 @@ export type Database = {
           documents_count: number
           email: string
           last_sign_in_at: string
+          plan: string
           questions_count: number
           roles: string[]
           user_id: string
         }[]
+      }
+      admin_set_plan: {
+        Args: {
+          _plan: Database["public"]["Enums"]["plan_tier"]
+          _target_user_id: string
+        }
+        Returns: undefined
       }
       admin_set_role: {
         Args: {
@@ -378,6 +600,10 @@ export type Database = {
           _target_user_id: string
         }
         Returns: undefined
+      }
+      can_read_assignment: {
+        Args: { _assignment_id: string; _user_id: string }
+        Returns: boolean
       }
       can_read_document: {
         Args: { _document_id: string; _user_id: string }
@@ -393,6 +619,11 @@ export type Database = {
           student_id: string
         }[]
       }
+      consume_usage: {
+        Args: { _amount?: number; _kind: string }
+        Returns: undefined
+      }
+      current_usage_period: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -420,6 +651,10 @@ export type Database = {
           subject: string
         }[]
       }
+      is_assignment_teacher: {
+        Args: { _assignment_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_class_member: {
         Args: { _class_id: string; _user_id: string }
         Returns: boolean
@@ -446,11 +681,13 @@ export type Database = {
           subject: string
         }[]
       }
+      my_usage: { Args: never; Returns: Json }
       platform_stats: { Args: never; Returns: Json }
       redeem_teacher_invite: { Args: { _code: string }; Returns: boolean }
     }
     Enums: {
       app_role: "student" | "teacher" | "admin"
+      plan_tier: "free" | "pro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -579,6 +816,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["student", "teacher", "admin"],
+      plan_tier: ["free", "pro"],
     },
   },
 } as const
