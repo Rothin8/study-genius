@@ -19,6 +19,18 @@ export const ingestDocument = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
 
+    // Plan limits are enforced in the database so the browser cannot bypass them.
+    const { error: docQuota } = await supabase.rpc("consume_usage", {
+      _kind: "document",
+      _amount: 1,
+    });
+    if (docQuota) throw new Error(docQuota.message);
+    const { error: pageQuota } = await supabase.rpc("consume_usage", {
+      _kind: "pages",
+      _amount: data.pages.length,
+    });
+    if (pageQuota) throw new Error(pageQuota.message);
+
     const { data: doc, error: docError } = await supabase
       .from("documents")
       .insert({

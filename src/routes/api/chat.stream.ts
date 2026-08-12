@@ -33,6 +33,13 @@ export const Route = createFileRoute("/api/chat/stream")({
         const { supabase, userId } = auth;
         const apiKey = getLovableApiKey();
 
+        // Monthly question allowance, checked and recorded in the database.
+        const { error: quotaError } = await supabase.rpc("consume_usage", {
+          _kind: "question",
+          _amount: 1,
+        });
+        if (quotaError) return new Response(quotaError.message, { status: 429 });
+
         let conversationId = parsed.data.conversationId ?? null;
         if (!conversationId) {
           const { data: conv, error } = await supabase
