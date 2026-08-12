@@ -24,7 +24,7 @@ function AuthCallback() {
         }
         await new Promise((resolve) => setTimeout(resolve, 150));
       }
-      if (!cancelled) navigate({ to: "/auth", search: {}, replace: true });
+      if (!cancelled) navigate({ to: "/auth", search: { redirect: undefined }, replace: true });
     }
     void run();
     return () => {
