@@ -6,6 +6,7 @@ import { useSession } from "@/hooks/use-session";
 import { useRoles } from "@/hooks/use-role";
 import { rememberRedirect, sanitizeRedirect } from "@/lib/auth-redirect";
 import { Button } from "@/components/ui/button";
+import { UsageMeter } from "@/components/usage-meter";
 import {
   Sparkle,
   MessageSquare,
@@ -92,6 +93,7 @@ function AppShell() {
         </nav>
 
         <div className="md:mt-auto md:space-y-2">
+          <UsageMeter />
           <p className="hidden truncate text-xs text-muted-foreground md:block">{user?.email}</p>
           <Button variant="ghost" size="sm" onClick={signOut} className="text-muted-foreground">
             <LogOut className="size-4" />
