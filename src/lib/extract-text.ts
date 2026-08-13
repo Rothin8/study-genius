@@ -2,16 +2,22 @@ import type { PDFPageProxy } from "pdfjs-dist";
 
 export type ExtractedPage = { page: number; text: string };
 export type OcrFn = (images: string[]) => Promise<string[]>;
+export type ProgressFn = (message: string) => void;
 
-const MAX_SIZE = 20 * 1024 * 1024;
+const MAX_SIZE = 50 * 1024 * 1024;
 const MIN_TEXT_PER_PAGE = 80;
-const MAX_OCR_PAGES = 10;
+const MAX_OCR_PAGES = 60;
+const OCR_BATCH = 4;
 
-export async function extractPages(file: File, ocr?: OcrFn): Promise<ExtractedPage[]> {
-  if (file.size > MAX_SIZE) throw new Error("Files must be 20MB or smaller.");
+export async function extractPages(
+  file: File,
+  ocr?: OcrFn,
+  onProgress?: ProgressFn,
+): Promise<ExtractedPage[]> {
+  if (file.size > MAX_SIZE) throw new Error("Files must be 50MB or smaller.");
   const name = file.name.toLowerCase();
 
-  if (name.endsWith(".pdf")) return extractPdf(file, ocr);
+  if (name.endsWith(".pdf")) return extractPdf(file, ocr, onProgress);
   if (name.endsWith(".docx")) return extractDocx(file);
   if (/\.(png|jpe?g|webp)$/.test(name) || file.type.startsWith("image/")) {
     return extractImage(file, ocr);
@@ -28,7 +34,11 @@ export async function extractPages(file: File, ocr?: OcrFn): Promise<ExtractedPa
   throw new Error("Unsupported file type. Upload a PDF, DOCX, image, TXT or Markdown file.");
 }
 
-async function extractPdf(file: File, ocr?: OcrFn): Promise<ExtractedPage[]> {
+async function extractPdf(
+  file: File,
+  ocr?: OcrFn,
+  onProgress?: ProgressFn,
+): Promise<ExtractedPage[]> {
   const pdfjs = await import("pdfjs-dist");
   const workerSrc = (await import("pdfjs-dist/build/pdf.worker.min.mjs?url")).default;
   pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
@@ -40,6 +50,7 @@ async function extractPdf(file: File, ocr?: OcrFn): Promise<ExtractedPage[]> {
   const needsOcr: number[] = [];
 
   for (let i = 1; i <= pdf.numPages; i++) {
+    if (i % 10 === 0) onProgress?.(`Reading page ${i} of ${pdf.numPages}...`);
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     const text = content.items
@@ -53,18 +64,24 @@ async function extractPdf(file: File, ocr?: OcrFn): Promise<ExtractedPage[]> {
 
   if (ocr && needsOcr.length > 0) {
     const targets = needsOcr.slice(0, MAX_OCR_PAGES);
-    const images: string[] = [];
-    for (const pageNumber of targets) {
-      images.push(await renderPageImage(await pdf.getPage(pageNumber)));
+    for (let start = 0; start < targets.length; start += OCR_BATCH) {
+      const batch = targets.slice(start, start + OCR_BATCH);
+      onProgress?.(
+        `Running OCR on scanned pages ${start + 1}-${start + batch.length} of ${targets.length}...`,
+      );
+      const images: string[] = [];
+      for (const pageNumber of batch) {
+        images.push(await renderPageImage(await pdf.getPage(pageNumber)));
+      }
+      const texts = await ocr(images);
+      batch.forEach((pageNumber, idx) => {
+        const ocrText = (texts[idx] ?? "").trim();
+        if (!ocrText) return;
+        const existing = pages.find((p) => p.page === pageNumber);
+        if (existing) existing.text = `${existing.text}\n${ocrText}`.trim();
+        else pages.push({ page: pageNumber, text: ocrText });
+      });
     }
-    const texts = await ocr(images);
-    targets.forEach((pageNumber, idx) => {
-      const ocrText = (texts[idx] ?? "").trim();
-      if (!ocrText) return;
-      const existing = pages.find((p) => p.page === pageNumber);
-      if (existing) existing.text = `${existing.text}\n${ocrText}`.trim();
-      else pages.push({ page: pageNumber, text: ocrText });
-    });
     pages.sort((a, b) => a.page - b.page);
   }
 
