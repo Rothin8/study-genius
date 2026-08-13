@@ -13,6 +13,7 @@ type AdminUser = {
   email: string | null;
   display_name: string | null;
   roles: string[] | null;
+  plan: string | null;
   documents_count: number;
   questions_count: number;
   created_at: string;
@@ -72,6 +73,23 @@ export function AdminUsers({ currentUserId }: { currentUserId: string | undefine
       toast.error(error instanceof Error ? error.message : "Could not change the role."),
   });
 
+  const setPlan = useMutation({
+    mutationFn: async (vars: { userId: string; plan: "free" | "pro" }) => {
+      const { error } = await supabase.rpc("admin_set_plan", {
+        _target_user_id: vars.userId,
+        _plan: vars.plan,
+      });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      toast.success("Plan updated.");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["my-usage"] });
+    },
+    onError: (error) =>
+      toast.error(error instanceof Error ? error.message : "Could not change the plan."),
+  });
+
   const createInvite = useMutation({
     mutationFn: async () => {
       if (!currentUserId) throw new Error("Not signed in.");
@@ -120,6 +138,7 @@ export function AdminUsers({ currentUserId }: { currentUserId: string | undefine
                 <tr>
                   <th className="py-2 text-left">User</th>
                   <th className="py-2 text-left">Roles</th>
+                  <th className="py-2 text-left">Plan</th>
                   <th className="py-2 text-right">Docs</th>
                   <th className="py-2 text-right">Questions</th>
                   <th className="py-2 text-right">Actions</th>
@@ -131,6 +150,8 @@ export function AdminUsers({ currentUserId }: { currentUserId: string | undefine
                   const isTeacher = roles.includes("teacher");
                   const isAdmin = roles.includes("admin");
                   const busy = setRole.isPending && setRole.variables?.userId === u.user_id;
+                  const plan = u.plan === "pro" ? "pro" : "free";
+                  const planBusy = setPlan.isPending && setPlan.variables?.userId === u.user_id;
                   return (
                     <tr key={u.user_id} className="border-t border-border align-middle">
                       <td className="py-2.5">
@@ -146,6 +167,22 @@ export function AdminUsers({ currentUserId }: { currentUserId: string | undefine
                             </Badge>
                           ))}
                         </span>
+                      </td>
+                      <td className="py-2.5">
+                        <Button
+                          size="sm"
+                          variant={plan === "pro" ? "default" : "secondary"}
+                          disabled={planBusy}
+                          onClick={() =>
+                            setPlan.mutate({
+                              userId: u.user_id,
+                              plan: plan === "pro" ? "free" : "pro",
+                            })
+                          }
+                        >
+                          {planBusy && <Loader2 className="size-3 animate-spin" />}
+                          {plan === "pro" ? "Pro" : "Free"}
+                        </Button>
                       </td>
                       <td className="py-2.5 text-right">{u.documents_count}</td>
                       <td className="py-2.5 text-right">{u.questions_count}</td>
