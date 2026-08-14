@@ -16,6 +16,7 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedChatRouteImport } from './routes/_authenticated/chat'
 import { Route as AuthenticatedClassesRouteImport } from './routes/_authenticated/classes'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
+import { Route as AuthenticatedStudyRouteImport } from './routes/_authenticated/study'
 import { Route as AuthCallbackRouteImport } from './routes/auth_.callback'
 import { Route as ApiChatStreamRouteImport } from './routes/api/chat.stream'
 
@@ -53,6 +54,11 @@ const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
   path: '/library',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedStudyRoute = AuthenticatedStudyRouteImport.update({
+  id: '/study',
+  path: '/study',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth_/callback',
   path: '/auth/callback',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/chat': typeof AuthenticatedChatRoute
   '/classes': typeof AuthenticatedClassesRoute
   '/library': typeof AuthenticatedLibraryRoute
+  '/study': typeof AuthenticatedStudyRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
 }
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/chat': typeof AuthenticatedChatRoute
   '/classes': typeof AuthenticatedClassesRoute
   '/library': typeof AuthenticatedLibraryRoute
+  '/study': typeof AuthenticatedStudyRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
 }
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/_authenticated/chat': typeof AuthenticatedChatRoute
   '/_authenticated/classes': typeof AuthenticatedClassesRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
+  '/_authenticated/study': typeof AuthenticatedStudyRoute
   '/auth_/callback': typeof AuthCallbackRoute
   '/api/chat/stream': typeof ApiChatStreamRoute
 }
@@ -105,6 +114,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/classes'
     | '/library'
+    | '/study'
     | '/auth/callback'
     | '/api/chat/stream'
   fileRoutesByTo: FileRoutesByTo
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
     | '/chat'
     | '/classes'
     | '/library'
+    | '/study'
     | '/auth/callback'
     | '/api/chat/stream'
   id:
@@ -126,6 +137,7 @@ export interface FileRouteTypes {
     | '/_authenticated/chat'
     | '/_authenticated/classes'
     | '/_authenticated/library'
+    | '/_authenticated/study'
     | '/auth_/callback'
     | '/api/chat/stream'
   fileRoutesById: FileRoutesById
@@ -189,6 +201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLibraryRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/study': {
+      id: '/_authenticated/study'
+      path: '/study'
+      fullPath: '/study'
+      preLoaderRoute: typeof AuthenticatedStudyRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/auth_/callback': {
       id: '/auth_/callback'
       path: '/auth/callback'
@@ -211,6 +230,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedChatRoute: typeof AuthenticatedChatRoute
   AuthenticatedClassesRoute: typeof AuthenticatedClassesRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
+  AuthenticatedStudyRoute: typeof AuthenticatedStudyRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -218,6 +238,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedChatRoute: AuthenticatedChatRoute,
   AuthenticatedClassesRoute: AuthenticatedClassesRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
+  AuthenticatedStudyRoute: AuthenticatedStudyRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
