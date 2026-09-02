@@ -85,6 +85,7 @@ function LibraryPage() {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const cancelled = useRef<Set<string>>(new Set());
   const running = useRef(false);
+  const pending = useRef<{ item: QueueItem; file: File; subjectName: string | null }[]>([]);
 
   const { data: subjects } = useQuery({
     queryKey: ["subjects"],
