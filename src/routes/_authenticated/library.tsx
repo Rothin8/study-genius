@@ -63,6 +63,15 @@ type Doc = {
   storage_path: string | null;
 };
 
+type QueueItem = {
+  id: string;
+  name: string;
+  size: number;
+  status: "queued" | "working" | "done" | "failed";
+  stage: string;
+  progress: number;
+};
+
 function LibraryPage() {
   const queryClient = useQueryClient();
   const ingest = useServerFn(ingestDocument);
