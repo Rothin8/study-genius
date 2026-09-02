@@ -144,8 +144,11 @@ function LibraryPage() {
       });
 
       if (subjectName) {
-        await supabase.from("subjects").insert({ name: subjectName }).select().maybeSingle();
-        queryClient.invalidateQueries({ queryKey: ["subjects"] });
+        const { data: auth } = await supabase.auth.getUser();
+        if (auth.user) {
+          await supabase.from("subjects").insert({ name: subjectName, user_id: auth.user.id });
+          queryClient.invalidateQueries({ queryKey: ["subjects"] });
+        }
       }
 
       patchItem(id, {
