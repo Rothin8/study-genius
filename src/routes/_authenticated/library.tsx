@@ -296,11 +296,53 @@ function LibraryPage() {
         </p>
 
         <div className="mx-auto mt-6 flex max-w-sm flex-col gap-3">
-          <Input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Subject or course (optional)"
-          />
+          {newSubject || (subjects?.length ?? 0) === 0 ? (
+            <div className="flex gap-2">
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="New subject or course"
+              />
+              {(subjects?.length ?? 0) > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Cancel new subject"
+                  onClick={() => {
+                    setNewSubject(false);
+                    setSubject("");
+                  }}
+                >
+                  <X className="size-4" />
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Select
+              value={subject || "__none"}
+              onValueChange={(value) => {
+                if (value === "__new") {
+                  setNewSubject(true);
+                  setSubject("");
+                  return;
+                }
+                setSubject(value === "__none" ? "" : value);
+              }}
+            >
+              <SelectTrigger aria-label="Subject">
+                <SelectValue placeholder="Subject (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">No subject</SelectItem>
+                {subjects?.map((s) => (
+                  <SelectItem key={s.id} value={s.name}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__new">+ New subject...</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <input
             ref={inputRef}
             type="file"
@@ -309,13 +351,78 @@ function LibraryPage() {
             className="hidden"
             onChange={(e) => void handleFiles(e.target.files)}
           />
-          <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
-            {upload.isPending && <Loader2 className="size-4 animate-spin" />}
-            {upload.isPending ? "Processing..." : "Choose files"}
-          </Button>
+          <Button onClick={() => inputRef.current?.click()}>Choose files</Button>
           {stage && <p className="text-xs text-muted-foreground">{stage}</p>}
         </div>
       </section>
+
+      {queue.length > 0 && (
+        <section className="mt-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+              Upload queue
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() =>
+                setQueue((items) =>
+                  items.filter((item) => item.status === "queued" || item.status === "working"),
+                )
+              }
+            >
+              Clear finished
+            </Button>
+          </div>
+
+          {queue.map((item) => (
+            <article key={item.id} className="glass rounded-2xl p-4">
+              <div className="flex items-center gap-3">
+                {item.status === "working" && (
+                  <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+                )}
+                {item.status === "done" && <Check className="size-4 shrink-0 text-primary" />}
+                {item.status === "failed" && (
+                  <AlertTriangle className="size-4 shrink-0 text-destructive" />
+                )}
+                {item.status === "queued" && (
+                  <UploadCloud className="size-4 shrink-0 text-muted-foreground" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.name}</p>
+                  <p
+                    className={`truncate text-xs ${
+                      item.status === "failed" ? "text-destructive" : "text-muted-foreground"
+                    }`}
+                  >
+                    {item.stage}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {(item.size / 1024).toFixed(0)} KB
+                </span>
+                {item.status === "queued" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Cancel ${item.name}`}
+                    onClick={() => {
+                      cancelled.current.add(item.id);
+                      setQueue((items) => items.filter((q) => q.id !== item.id));
+                    }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                )}
+              </div>
+              {(item.status === "working" || item.status === "queued") && (
+                <Progress value={item.progress} className="mt-3 h-1.5" />
+              )}
+            </article>
+          ))}
+        </section>
+      )}
 
       <section className="mt-10 space-y-3">
         <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
