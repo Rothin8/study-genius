@@ -20,6 +20,7 @@ import {
   Pencil,
   Library,
   Check,
+  ExternalLink,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/chat")({
