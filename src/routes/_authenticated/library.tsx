@@ -12,6 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   UploadCloud,
   FileText,
@@ -20,6 +28,9 @@ import {
   Layers,
   RefreshCw,
   ExternalLink,
+  X,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/library")({
@@ -52,6 +63,15 @@ type Doc = {
   storage_path: string | null;
 };
 
+type QueueItem = {
+  id: string;
+  name: string;
+  size: number;
+  status: "queued" | "working" | "done" | "failed";
+  stage: string;
+  progress: number;
+};
+
 function LibraryPage() {
   const queryClient = useQueryClient();
   const ingest = useServerFn(ingestDocument);
@@ -59,8 +79,25 @@ function LibraryPage() {
   const runOcr = useServerFn(ocrPages);
   const inputRef = useRef<HTMLInputElement>(null);
   const [subject, setSubject] = useState("");
+  const [newSubject, setNewSubject] = useState(false);
   const [stage, setStage] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const cancelled = useRef<Set<string>>(new Set());
+  const running = useRef(false);
+  const pending = useRef<{ item: QueueItem; file: File; subjectName: string | null }[]>([]);
+
+  const { data: subjects } = useQuery({
+    queryKey: ["subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("id, name")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
 
   const { data: docs, isLoading } = useQuery({
     queryKey: ["documents"],
@@ -74,41 +111,56 @@ function LibraryPage() {
     },
   });
 
-  const upload = useMutation({
-    mutationFn: async (file: File) => {
-      setStage(`Reading ${file.name}...`);
+  const patchItem = useCallback((id: string, patch: Partial<QueueItem>) => {
+    setQueue((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  }, []);
+
+  const processFile = useCallback(
+    async (id: string, file: File, subjectName: string | null) => {
+      patchItem(id, { status: "working", stage: "Reading file...", progress: 10 });
       const pages = await extractPages(file, async (images) => {
-        setStage("Scanned pages detected — running OCR...");
+        patchItem(id, { stage: `Running OCR on ${images.length} scanned page(s)...`, progress: 35 });
         const { texts } = await runOcr({ data: { images } });
         return texts;
       });
 
-      setStage("Uploading original file...");
+      patchItem(id, { stage: "Uploading original...", progress: 60 });
       const path = `${crypto.randomUUID()}-${file.name}`;
       const { error: storageError } = await supabase.storage
         .from("documents")
         .upload(path, file, { contentType: file.type || "application/octet-stream" });
       if (storageError) throw new Error(storageError.message);
 
-      setStage("Chunking + generating embeddings...");
-      return ingest({
+      patchItem(id, { stage: "Chunking + embedding...", progress: 80 });
+      const result = await ingest({
         data: {
           fileName: file.name,
           fileType: file.type || "application/octet-stream",
           fileSize: file.size,
           storagePath: path,
-          subject: subject.trim() || null,
+          subject: subjectName,
           pages,
         },
       });
-    },
-    onSuccess: (result) => {
-      toast.success(`Indexed ${result.chunks} passages — ready to ask questions.`);
+
+      if (subjectName) {
+        const { data: auth } = await supabase.auth.getUser();
+        if (auth.user) {
+          await supabase.from("subjects").insert({ name: subjectName, user_id: auth.user.id });
+          queryClient.invalidateQueries({ queryKey: ["subjects"] });
+        }
+      }
+
+      patchItem(id, {
+        status: "done",
+        stage: `Indexed ${result.chunks} passages`,
+        progress: 100,
+      });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["my-usage"] });
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Upload failed."),
-    onSettled: () => setStage(null),
-  });
+    [ingest, patchItem, queryClient, runOcr],
+  );
 
   const remove = useMutation({
     mutationFn: async (id: string) => removeDocument({ data: { documentId: id } }),
@@ -175,11 +227,44 @@ function LibraryPage() {
   const handleFiles = useCallback(
     async (files: FileList | null) => {
       if (!files?.length) return;
-      for (const file of Array.from(files)) {
-        await upload.mutateAsync(file).catch(() => undefined);
+      const subjectName = subject.trim() || null;
+      const added = Array.from(files).map((file) => ({
+        item: {
+          id: crypto.randomUUID(),
+          name: file.name,
+          size: file.size,
+          status: "queued" as const,
+          stage: "Waiting...",
+          progress: 0,
+        },
+        file,
+        subjectName,
+      }));
+      setQueue((items) => [...items, ...added.map((a) => a.item)]);
+      pending.current.push(...added);
+
+      if (running.current) return;
+      running.current = true;
+      try {
+        while (pending.current.length) {
+          const next = pending.current.shift()!;
+          if (cancelled.current.has(next.item.id)) continue;
+          try {
+            await processFile(next.item.id, next.file, next.subjectName);
+          } catch (error) {
+            patchItem(next.item.id, {
+              status: "failed",
+              stage: error instanceof Error ? error.message : "Upload failed.",
+              progress: 100,
+            });
+            toast.error(`${next.file.name}: ${error instanceof Error ? error.message : "failed"}`);
+          }
+        }
+      } finally {
+        running.current = false;
       }
     },
-    [upload],
+    [patchItem, processFile, subject],
   );
 
   return (
@@ -214,11 +299,53 @@ function LibraryPage() {
         </p>
 
         <div className="mx-auto mt-6 flex max-w-sm flex-col gap-3">
-          <Input
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Subject or course (optional)"
-          />
+          {newSubject || (subjects?.length ?? 0) === 0 ? (
+            <div className="flex gap-2">
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="New subject or course"
+              />
+              {(subjects?.length ?? 0) > 0 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Cancel new subject"
+                  onClick={() => {
+                    setNewSubject(false);
+                    setSubject("");
+                  }}
+                >
+                  <X className="size-4" />
+                </Button>
+              )}
+            </div>
+          ) : (
+            <Select
+              value={subject || "__none"}
+              onValueChange={(value) => {
+                if (value === "__new") {
+                  setNewSubject(true);
+                  setSubject("");
+                  return;
+                }
+                setSubject(value === "__none" ? "" : value);
+              }}
+            >
+              <SelectTrigger aria-label="Subject">
+                <SelectValue placeholder="Subject (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none">No subject</SelectItem>
+                {subjects?.map((s) => (
+                  <SelectItem key={s.id} value={s.name}>
+                    {s.name}
+                  </SelectItem>
+                ))}
+                <SelectItem value="__new">+ New subject...</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <input
             ref={inputRef}
             type="file"
@@ -227,13 +354,78 @@ function LibraryPage() {
             className="hidden"
             onChange={(e) => void handleFiles(e.target.files)}
           />
-          <Button onClick={() => inputRef.current?.click()} disabled={upload.isPending}>
-            {upload.isPending && <Loader2 className="size-4 animate-spin" />}
-            {upload.isPending ? "Processing..." : "Choose files"}
-          </Button>
+          <Button onClick={() => inputRef.current?.click()}>Choose files</Button>
           {stage && <p className="text-xs text-muted-foreground">{stage}</p>}
         </div>
       </section>
+
+      {queue.length > 0 && (
+        <section className="mt-6 space-y-2">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+              Upload queue
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground"
+              onClick={() =>
+                setQueue((items) =>
+                  items.filter((item) => item.status === "queued" || item.status === "working"),
+                )
+              }
+            >
+              Clear finished
+            </Button>
+          </div>
+
+          {queue.map((item) => (
+            <article key={item.id} className="glass rounded-2xl p-4">
+              <div className="flex items-center gap-3">
+                {item.status === "working" && (
+                  <Loader2 className="size-4 shrink-0 animate-spin text-primary" />
+                )}
+                {item.status === "done" && <Check className="size-4 shrink-0 text-primary" />}
+                {item.status === "failed" && (
+                  <AlertTriangle className="size-4 shrink-0 text-destructive" />
+                )}
+                {item.status === "queued" && (
+                  <UploadCloud className="size-4 shrink-0 text-muted-foreground" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{item.name}</p>
+                  <p
+                    className={`truncate text-xs ${
+                      item.status === "failed" ? "text-destructive" : "text-muted-foreground"
+                    }`}
+                  >
+                    {item.stage}
+                  </p>
+                </div>
+                <span className="shrink-0 text-xs text-muted-foreground">
+                  {(item.size / 1024).toFixed(0)} KB
+                </span>
+                {item.status === "queued" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Cancel ${item.name}`}
+                    onClick={() => {
+                      cancelled.current.add(item.id);
+                      setQueue((items) => items.filter((q) => q.id !== item.id));
+                    }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                )}
+              </div>
+              {(item.status === "working" || item.status === "queued") && (
+                <Progress value={item.progress} className="mt-3 h-1.5" />
+              )}
+            </article>
+          ))}
+        </section>
+      )}
 
       <section className="mt-10 space-y-3">
         <h2 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">

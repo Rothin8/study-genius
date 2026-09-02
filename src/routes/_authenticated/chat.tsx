@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { openStoredDocument } from "@/lib/open-document";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +20,7 @@ import {
   Pencil,
   Library,
   Check,
+  ExternalLink,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/chat")({
@@ -39,6 +41,7 @@ export const Route = createFileRoute("/_authenticated/chat")({
 
 type Citation = {
   marker: number;
+  documentId?: string | null;
   fileName: string;
   page: number | null;
   snippet: string;
@@ -468,10 +471,22 @@ function Citations({ citations }: { citations: Citation[] }) {
               </p>
               <Badge variant="secondary">{citation.confidence}%</Badge>
             </div>
-            {citation.page != null && (
-              <p className="mt-1 text-xs text-muted-foreground">Page {citation.page}</p>
-            )}
             <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">{citation.snippet}</p>
+            {citation.documentId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 -ml-2 h-7 text-xs text-primary"
+                onClick={() =>
+                  openStoredDocument(citation.documentId!, citation.page).catch((error) =>
+                    toast.error(error instanceof Error ? error.message : "Could not open source."),
+                  )
+                }
+              >
+                <ExternalLink className="size-3" />
+                {citation.page != null ? `Open page ${citation.page}` : "Open source"}
+              </Button>
+            )}
           </div>
         ))}
       </div>

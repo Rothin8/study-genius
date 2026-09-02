@@ -15,6 +15,7 @@ import {
   LogOut,
   Users,
   BarChart3,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -54,6 +55,7 @@ function AppShell() {
   const nav = [
     { to: "/chat", label: "AI Chat", icon: MessageSquare },
     { to: "/library", label: "My Documents", icon: Library },
+    { to: "/study", label: "Study Tools", icon: GraduationCap },
     { to: "/classes", label: isTeacher ? "My Classes" : "Classes", icon: Users },
     ...(isAdmin ? [{ to: "/admin", label: "Analytics", icon: BarChart3 }] : []),
   ] as const;
