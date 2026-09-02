@@ -101,41 +101,53 @@ function LibraryPage() {
     },
   });
 
-  const upload = useMutation({
-    mutationFn: async (file: File) => {
-      setStage(`Reading ${file.name}...`);
+  const patchItem = useCallback((id: string, patch: Partial<QueueItem>) => {
+    setQueue((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)));
+  }, []);
+
+  const processFile = useCallback(
+    async (id: string, file: File, subjectName: string | null) => {
+      patchItem(id, { status: "working", stage: "Reading file...", progress: 10 });
       const pages = await extractPages(file, async (images) => {
-        setStage("Scanned pages detected — running OCR...");
+        patchItem(id, { stage: `Running OCR on ${images.length} scanned page(s)...`, progress: 35 });
         const { texts } = await runOcr({ data: { images } });
         return texts;
       });
 
-      setStage("Uploading original file...");
+      patchItem(id, { stage: "Uploading original...", progress: 60 });
       const path = `${crypto.randomUUID()}-${file.name}`;
       const { error: storageError } = await supabase.storage
         .from("documents")
         .upload(path, file, { contentType: file.type || "application/octet-stream" });
       if (storageError) throw new Error(storageError.message);
 
-      setStage("Chunking + generating embeddings...");
-      return ingest({
+      patchItem(id, { stage: "Chunking + embedding...", progress: 80 });
+      const result = await ingest({
         data: {
           fileName: file.name,
           fileType: file.type || "application/octet-stream",
           fileSize: file.size,
           storagePath: path,
-          subject: subject.trim() || null,
+          subject: subjectName,
           pages,
         },
       });
-    },
-    onSuccess: (result) => {
-      toast.success(`Indexed ${result.chunks} passages — ready to ask questions.`);
+
+      if (subjectName) {
+        await supabase.from("subjects").insert({ name: subjectName }).select().maybeSingle();
+        queryClient.invalidateQueries({ queryKey: ["subjects"] });
+      }
+
+      patchItem(id, {
+        status: "done",
+        stage: `Indexed ${result.chunks} passages`,
+        progress: 100,
+      });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
+      queryClient.invalidateQueries({ queryKey: ["my-usage"] });
     },
-    onError: (error) => toast.error(error instanceof Error ? error.message : "Upload failed."),
-    onSettled: () => setStage(null),
-  });
+    [ingest, patchItem, queryClient, runOcr],
+  );
 
   const remove = useMutation({
     mutationFn: async (id: string) => removeDocument({ data: { documentId: id } }),
