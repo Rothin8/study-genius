@@ -39,6 +39,7 @@ export const Route = createFileRoute("/_authenticated/chat")({
 
 type Citation = {
   marker: number;
+  documentId?: string | null;
   fileName: string;
   page: number | null;
   snippet: string;
