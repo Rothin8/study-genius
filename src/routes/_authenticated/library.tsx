@@ -70,8 +70,24 @@ function LibraryPage() {
   const runOcr = useServerFn(ocrPages);
   const inputRef = useRef<HTMLInputElement>(null);
   const [subject, setSubject] = useState("");
+  const [newSubject, setNewSubject] = useState(false);
   const [stage, setStage] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const cancelled = useRef<Set<string>>(new Set());
+  const running = useRef(false);
+
+  const { data: subjects } = useQuery({
+    queryKey: ["subjects"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subjects")
+        .select("id, name")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
 
   const { data: docs, isLoading } = useQuery({
     queryKey: ["documents"],
