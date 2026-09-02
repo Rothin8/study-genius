@@ -15,6 +15,7 @@ import {
   LogOut,
   Users,
   BarChart3,
+  GraduationCap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
