@@ -469,10 +469,22 @@ function Citations({ citations }: { citations: Citation[] }) {
               </p>
               <Badge variant="secondary">{citation.confidence}%</Badge>
             </div>
-            {citation.page != null && (
-              <p className="mt-1 text-xs text-muted-foreground">Page {citation.page}</p>
-            )}
             <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">{citation.snippet}</p>
+            {citation.documentId && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-1 -ml-2 h-7 text-xs text-primary"
+                onClick={() =>
+                  openStoredDocument(citation.documentId!, citation.page).catch((error) =>
+                    toast.error(error instanceof Error ? error.message : "Could not open source."),
+                  )
+                }
+              >
+                <ExternalLink className="size-3" />
+                {citation.page != null ? `Open page ${citation.page}` : "Open source"}
+              </Button>
+            )}
           </div>
         ))}
       </div>
