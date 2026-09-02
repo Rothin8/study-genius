@@ -214,11 +214,44 @@ function LibraryPage() {
   const handleFiles = useCallback(
     async (files: FileList | null) => {
       if (!files?.length) return;
-      for (const file of Array.from(files)) {
-        await upload.mutateAsync(file).catch(() => undefined);
+      const subjectName = subject.trim() || null;
+      const added = Array.from(files).map((file) => ({
+        item: {
+          id: crypto.randomUUID(),
+          name: file.name,
+          size: file.size,
+          status: "queued" as const,
+          stage: "Waiting...",
+          progress: 0,
+        },
+        file,
+        subjectName,
+      }));
+      setQueue((items) => [...items, ...added.map((a) => a.item)]);
+      pending.current.push(...added);
+
+      if (running.current) return;
+      running.current = true;
+      try {
+        while (pending.current.length) {
+          const next = pending.current.shift()!;
+          if (cancelled.current.has(next.item.id)) continue;
+          try {
+            await processFile(next.item.id, next.file, next.subjectName);
+          } catch (error) {
+            patchItem(next.item.id, {
+              status: "failed",
+              stage: error instanceof Error ? error.message : "Upload failed.",
+              progress: 100,
+            });
+            toast.error(`${next.file.name}: ${error instanceof Error ? error.message : "failed"}`);
+          }
+        }
+      } finally {
+        running.current = false;
       }
     },
-    [upload],
+    [patchItem, processFile, subject],
   );
 
   return (
