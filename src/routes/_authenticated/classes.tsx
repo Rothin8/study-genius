@@ -439,6 +439,15 @@ function StudentView() {
           </article>
         ))}
       </section>
+
+      <section className="glass mt-6 rounded-3xl p-6">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <ClipboardList className="size-4 text-primary" /> My assignments
+        </h2>
+        <div className="mt-4">
+          <StudentAssignments />
+        </div>
+      </section>
     </>
   );
 }
