@@ -164,10 +164,14 @@ function TeacherView() {
               <Tabs defaultValue="documents" className="mt-5">
                 <TabsList>
                   <TabsTrigger value="documents">Shared documents</TabsTrigger>
+                  <TabsTrigger value="assignments">Assignments</TabsTrigger>
                   <TabsTrigger value="activity">Student activity</TabsTrigger>
                 </TabsList>
                 <TabsContent value="documents" className="mt-4">
                   <SharedDocuments classId={klass.id} />
+                </TabsContent>
+                <TabsContent value="assignments" className="mt-4">
+                  <TeacherAssignments classId={klass.id} />
                 </TabsContent>
                 <TabsContent value="activity" className="mt-4">
                   <ClassActivity classId={klass.id} />
