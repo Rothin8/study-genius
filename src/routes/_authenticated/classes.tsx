@@ -10,7 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Plus, Copy, FileText, Activity, GraduationCap, Loader2 } from "lucide-react";
+import { TeacherAssignments, StudentAssignments } from "@/components/assignments";
+import {
+  Users,
+  Plus,
+  Copy,
+  FileText,
+  Activity,
+  GraduationCap,
+  Loader2,
+  ClipboardList,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/classes")({
   head: () => ({
