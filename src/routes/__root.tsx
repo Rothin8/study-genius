@@ -144,9 +144,16 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <BrandingEffect />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster />
     </QueryClientProvider>
   );
+}
+
+/** Applies the admin-configured colours and favicon to every page. */
+function BrandingEffect() {
+  useApplyBranding();
+  return null;
 }
