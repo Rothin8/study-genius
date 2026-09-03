@@ -10,7 +10,17 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Plus, Copy, FileText, Activity, GraduationCap, Loader2 } from "lucide-react";
+import { TeacherAssignments, StudentAssignments } from "@/components/assignments";
+import {
+  Users,
+  Plus,
+  Copy,
+  FileText,
+  Activity,
+  GraduationCap,
+  Loader2,
+  ClipboardList,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/classes")({
   head: () => ({
@@ -164,10 +174,14 @@ function TeacherView() {
               <Tabs defaultValue="documents" className="mt-5">
                 <TabsList>
                   <TabsTrigger value="documents">Shared documents</TabsTrigger>
+                  <TabsTrigger value="assignments">Assignments</TabsTrigger>
                   <TabsTrigger value="activity">Student activity</TabsTrigger>
                 </TabsList>
                 <TabsContent value="documents" className="mt-4">
                   <SharedDocuments classId={klass.id} />
+                </TabsContent>
+                <TabsContent value="assignments" className="mt-4">
+                  <TeacherAssignments classId={klass.id} />
                 </TabsContent>
                 <TabsContent value="activity" className="mt-4">
                   <ClassActivity classId={klass.id} />
@@ -424,6 +438,15 @@ function StudentView() {
             <Badge variant="secondary">Joined</Badge>
           </article>
         ))}
+      </section>
+
+      <section className="glass mt-6 rounded-3xl p-6">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <ClipboardList className="size-4 text-primary" /> My assignments
+        </h2>
+        <div className="mt-4">
+          <StudentAssignments />
+        </div>
       </section>
     </>
   );
