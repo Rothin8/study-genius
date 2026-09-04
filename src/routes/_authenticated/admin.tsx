@@ -198,6 +198,12 @@ function AdminPage() {
           </section>
 
           <AdminUsers currentUserId={user?.id} />
+
+          <AdminAssignments />
+
+          <div className="mt-6">
+            <AdminBranding />
+          </div>
         </>
       )}
     </div>
