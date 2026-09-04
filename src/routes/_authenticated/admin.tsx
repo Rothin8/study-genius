@@ -15,6 +15,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRoles } from "@/hooks/use-role";
 import { useSession } from "@/hooks/use-session";
 import { AdminUsers } from "@/components/admin-users";
+import { AdminAssignments } from "@/components/admin-assignments";
+import { AdminBranding } from "@/components/admin-branding";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ShieldAlert } from "lucide-react";
 
@@ -198,6 +200,12 @@ function AdminPage() {
           </section>
 
           <AdminUsers currentUserId={user?.id} />
+
+          <AdminAssignments />
+
+          <div className="mt-6">
+            <AdminBranding />
+          </div>
         </>
       )}
     </div>
