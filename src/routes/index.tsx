@@ -48,14 +48,23 @@ function Landing() {
     <div className="hero-bg min-h-screen">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-6 md:px-8">
         <div className="flex items-center gap-2">
-          <span className="bg-gradient-accent flex size-9 items-center justify-center rounded-xl">
-            <Sparkle className="size-5 text-primary-foreground" />
-          </span>
-          <span className="font-display text-lg font-semibold">Solution.AI</span>
+          {branding.logo_url ? (
+            <img src={branding.logo_url} alt={branding.app_name} className="h-9 w-auto" />
+          ) : (
+            <span className="bg-gradient-accent flex size-9 items-center justify-center rounded-xl">
+              <Sparkle className="size-5 text-primary-foreground" />
+            </span>
+          )}
+          <span className="font-display text-lg font-semibold">{branding.app_name}</span>
         </div>
-        <Button asChild variant="secondary" size="sm">
-          <Link to={target}>{session ? "Open app" : "Sign in"}</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/pricing">Pricing</Link>
+          </Button>
+          <Button asChild variant="secondary" size="sm">
+            <Link to={target}>{session ? "Open app" : "Sign in"}</Link>
+          </Button>
+        </div>
       </header>
 
       <main>
