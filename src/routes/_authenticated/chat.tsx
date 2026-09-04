@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
@@ -109,12 +109,15 @@ function ChatPage() {
       const { data, error } = await supabase
         .from("documents")
         .select("id, file_name, subject, status")
-        .eq("status", "ready")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as { id: string; file_name: string; subject: string | null }[];
+      return data as { id: string; file_name: string; subject: string | null; status: string }[];
     },
   });
+
+  const readyDocs = useMemo(() => (docs ?? []).filter((d) => d.status === "ready"), [docs]);
+  const pendingDocs = useMemo(() => (docs ?? []).filter((d) => d.status !== "ready"), [docs]);
+
 
   const scopeLabel = useMemo(() => {
     if (scope.length === 0) return "All my materials";
@@ -262,21 +265,32 @@ function ChatPage() {
       {scopeOpen && (
         <div className="border-b border-border px-4 py-3 md:px-8">
           <div className="mx-auto max-w-3xl">
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 Search in
               </p>
-              <Button variant="ghost" size="sm" onClick={() => setScope([])}>
-                All materials
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={() => setScope([])}>
+                  All materials
+                </Button>
+                <Button variant="secondary" size="sm" asChild>
+                  <Link to="/library">
+                    <Plus className="size-4" />
+                    Add materials
+                  </Link>
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setScopeOpen(false)}>
+                  Done
+                </Button>
+              </div>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {(docs?.length ?? 0) === 0 && (
+              {readyDocs.length === 0 && pendingDocs.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  No indexed documents yet — upload one from My Documents.
+                  No documents yet — use “Add materials” to upload your first PDF or notes.
                 </p>
               )}
-              {docs?.map((doc) => {
+              {readyDocs.map((doc) => {
                 const active = scope.includes(doc.id);
                 return (
                   <button
@@ -299,10 +313,23 @@ function ChatPage() {
                   </button>
                 );
               })}
+              {pendingDocs.map((doc) => (
+                <span
+                  key={doc.id}
+                  className="flex max-w-64 items-center gap-1.5 rounded-full border border-dashed border-border px-3 py-1.5 text-xs text-muted-foreground"
+                  title={doc.status === "failed" ? "Indexing failed — retry it in My Documents" : "Still being indexed"}
+                >
+                  <span className="truncate">{doc.file_name}</span>
+                  <span className="shrink-0">
+                    {doc.status === "failed" ? "failed" : "indexing..."}
+                  </span>
+                </span>
+              ))}
             </div>
           </div>
         </div>
       )}
+
 
       <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
         <div className="mx-auto max-w-3xl space-y-6">
