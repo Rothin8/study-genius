@@ -109,12 +109,15 @@ function ChatPage() {
       const { data, error } = await supabase
         .from("documents")
         .select("id, file_name, subject, status")
-        .eq("status", "ready")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as { id: string; file_name: string; subject: string | null }[];
+      return data as { id: string; file_name: string; subject: string | null; status: string }[];
     },
   });
+
+  const readyDocs = useMemo(() => (docs ?? []).filter((d) => d.status === "ready"), [docs]);
+  const pendingDocs = useMemo(() => (docs ?? []).filter((d) => d.status !== "ready"), [docs]);
+
 
   const scopeLabel = useMemo(() => {
     if (scope.length === 0) return "All my materials";
