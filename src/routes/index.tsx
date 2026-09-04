@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { useSession } from "@/hooks/use-session";
+import { useBranding } from "@/hooks/use-branding";
 import { Sparkle, FileSearch, Quote, ShieldCheck, Upload, MessageSquare } from "lucide-react";
 
 export const Route = createFileRoute("/")({
