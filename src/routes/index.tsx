@@ -42,6 +42,7 @@ const STEPS = [
 
 function Landing() {
   const { session } = useSession();
+  const branding = useBranding();
   const target = session ? "/chat" : "/auth";
 
   return (
