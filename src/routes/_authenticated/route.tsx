@@ -8,7 +8,6 @@ import { rememberRedirect, sanitizeRedirect } from "@/lib/auth-redirect";
 import { Button } from "@/components/ui/button";
 import { UsageMeter } from "@/components/usage-meter";
 import {
-  Sparkle,
   MessageSquare,
   Library,
   Loader2,
@@ -69,13 +68,13 @@ function AppShell() {
   }
 
   return (
-    <div className="hero-bg flex min-h-screen flex-col md:flex-row">
-      <aside className="glass sticky top-0 z-20 flex items-center justify-between gap-4 px-4 py-3 md:h-screen md:w-64 md:flex-col md:items-stretch md:justify-start md:rounded-none md:py-6">
+    <div className="flex min-h-screen flex-col bg-secondary md:flex-row">
+      <aside className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-sidebar-border bg-sidebar px-4 py-3 md:h-screen md:w-64 md:flex-col md:items-stretch md:justify-start md:border-r md:border-b-0 md:py-6">
         <Link to="/" className="flex items-center gap-2">
-          <span className="bg-gradient-accent flex size-8 items-center justify-center rounded-lg">
-            <Sparkle className="size-4 text-primary-foreground" />
+          <span className="flex size-8 rotate-2 items-center justify-center rounded-md bg-primary font-display text-sm font-bold text-primary-foreground shadow-glow">
+            <span className="-rotate-2">S</span>
           </span>
-          <span className="font-display font-semibold">Solution.AI</span>
+          <span className="font-display font-bold text-primary">Solution.AI</span>
         </Link>
 
         <nav className="flex gap-1 md:mt-8 md:flex-col">
@@ -84,7 +83,7 @@ function AppShell() {
               key={item.to}
               to={item.to}
               className={cn(
-                "flex items-center gap-2 rounded-xl px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground",
                 pathname === item.to && "bg-accent text-accent-foreground",
               )}
             >
