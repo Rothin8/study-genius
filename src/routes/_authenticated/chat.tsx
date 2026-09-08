@@ -6,10 +6,17 @@ import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { openStoredDocument } from "@/lib/open-document";
+import { exportAnswerAsPdf, exportAnswerAsWord } from "@/lib/export-answer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Loader2,
   Send,
@@ -21,6 +28,9 @@ import {
   Library,
   Check,
   ExternalLink,
+  Download,
+  FileText,
+  FileType2,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/chat")({
@@ -368,6 +378,7 @@ function ChatPage() {
                 <div className="prose prose-sm prose-invert max-w-none">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
                 </div>
+                <AnswerDownload content={message.content} citations={message.citations ?? []} />
                 <Citations citations={message.citations ?? []} />
               </div>
             ),
@@ -385,6 +396,7 @@ function ChatPage() {
                   <div className="prose prose-sm prose-invert max-w-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{streamed}</ReactMarkdown>
                   </div>
+                  {!busy && <AnswerDownload content={streamed} citations={streamCitations} />}
                   <Citations citations={streamCitations} />
                 </div>
               ) : (
@@ -479,6 +491,44 @@ function ChatPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+function AnswerDownload({ content, citations }: { content: string; citations: Citation[] }) {
+  const [exporting, setExporting] = useState<"pdf" | "word" | null>(null);
+
+  async function download(format: "pdf" | "word") {
+    setExporting(format);
+    try {
+      if (format === "pdf") await exportAnswerAsPdf(content, citations);
+      else await exportAnswerAsWord(content, citations);
+      toast.success(`Answer downloaded as ${format === "pdf" ? "PDF" : "Word"}.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not download this answer.");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" className="text-muted-foreground" disabled={exporting != null}>
+          {exporting ? <Loader2 className="animate-spin" /> : <Download />}
+          Download answer
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem onSelect={() => void download("pdf")}>
+          <FileText />
+          PDF document
+        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={() => void download("word")}>
+          <FileType2 />
+          Word document
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
